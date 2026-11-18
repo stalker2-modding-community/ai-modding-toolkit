@@ -2,7 +2,8 @@
 
 ## Contents
 - Before editing a GSC system: check it compiles in the kit
-- Reading module values: copy them as text
+- Reading module constants offline
+- Reading links, dynamic inputs and text: copy them as text
 - Row naming quirks in the stack
 - Editing an expression
 - CPU and GPU scripts
@@ -18,8 +19,21 @@ script fails, and the cooked system renders NOTHING in game (a tell: the cooked 
 Before editing any system, open it in the kit and search the editor log for `Skipping non mounted imported package` and
 `Unknown Function Call`. Any hit: that system cannot be rebuilt from the kit as is.
 
-## Reading module values: copy them as text
-uasset-dump does not decode Niagara parameter stores, and headless Python cannot read them. The editor clipboard can:
+## Reading module constants offline
+Constants typed into a module (a Lifetime, a Spawn Count, a colour) can be read from the saved file with the kit closed.
+Every NiagaraScript export keeps them in `RapidIterationParameters`: a list of names with byte offsets
+(`SortedParameterOffsets`) and the packed values (`ParameterData`). A system's user parameters are in `ExposedParameters`.
+- `python scripts/niagara_constants.py <system or emitter .uasset> [filter]` reads the uncooked asset directly and prints
+  one line per value, `Constants.<Emitter>.<Module>.<Input> [type] = value`, grouped by script. About 60 ms a system.
+- Checked on two kit-mod systems (1,429 and 292 values): identical, line for line, to a second reader that works from a
+  uasset-dump JSON.
+- A constant appears once per script that uses it (spawn, update, GPU compute).
+- Uncooked assets only (file version UE5 1012 or newer). It reads; it does not write.
+- It shows constants only. What an input is LINKED to, dynamic inputs and expression text are not in these stores: use the
+  clipboard route below. uasset-dump itself does not decode the stores, and headless Python cannot read them.
+
+## Reading links, dynamic inputs and text: copy them as text
+The editor clipboard shows everything a module holds:
 1. The user selects a module in an emitter's stack, Ctrl+C, and pastes it into a text file. Several modules can go one after
    another into the same file.
 2. `python scripts/niagara_clipboard.py <pasted.txt>` prints each module with its inputs: local values decoded (floats, vectors,
