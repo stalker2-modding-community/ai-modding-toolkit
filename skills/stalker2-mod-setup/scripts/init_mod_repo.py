@@ -1,11 +1,10 @@
 """Create a local repo for one STALKER 2 mod, in the layout the stalker2-mod-setup skill uses.
 
-    python init_mod_repo.py <folder> --name "<Mod name>" [--author "<name>"] [--email <address>] [--no-git]
+    python init_mod_repo.py <folder> --name "<Mod name>" [--author "<name>"] [--email <address>] [--with-hook] [--no-git]
 
 Creates MOD.md, CHANGELOG.md, LOG.md, source/, release/, baseline/, notes/, .gitignore and .gitattributes, then runs
-git init and makes the first commit (when git is installed and --no-git is not given). It never overwrites an existing
-file and never adds a remote. Commits use the name and email from --author / --email, else git's own settings, else a
-local placeholder (name "modder", email "modder@localhost") set for this repo only. Stdlib only.
+git init and makes the first commit (when git is installed and --no-git is not given). With --with-hook, installs an
+opt-in .git/hooks/pre-commit running mod_guardrail.py (never overwrites an existing hook; skips cleanly if moved). Stdlib only.
 """
 import datetime, os, shutil, subprocess, sys
 
@@ -49,6 +48,44 @@ def files(name):
         'source/README.md': "The readable source of the mod: cfg patch files, generator scripts, Zone Kit asset backups.\n",
         'notes/README.md': f"Notes kept with the mod. Started {today}.\n",
     }
+
+
+def _install_hook(folder):
+    hooks_dir = os.path.join(folder, '.git', 'hooks')
+    hook_path = os.path.join(hooks_dir, 'pre-commit')
+    if os.path.exists(hook_path):
+        print('left existing pre-commit hook untouched: %s' % hook_path)
+        return
+    guard = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mod_guardrail.py').replace('\\', '/')
+    if not os.path.isfile(guard):
+        print('warning: mod_guardrail.py not found next to init_mod_repo.py; skipping hook')
+        return
+    os.makedirs(hooks_dir, exist_ok=True)
+    script = (
+        '#!/bin/sh\n'
+        'GUARD="%s"\n'
+        'if [ ! -f "$GUARD" ]; then\n'
+        '  echo "mod_guardrail: guard not found at $GUARD, skipping" >&2\n'
+        '  exit 0\n'
+        'fi\n'
+        'if command -v python >/dev/null 2>&1; then\n'
+        '  python "$GUARD"\n'
+        'elif command -v python3 >/dev/null 2>&1; then\n'
+        '  python3 "$GUARD"\n'
+        'elif command -v py >/dev/null 2>&1; then\n'
+        '  py -3 "$GUARD"\n'
+        'else\n'
+        '  echo "mod_guardrail: python not found, skipping" >&2\n'
+        '  exit 0\n'
+        'fi\n'
+    ) % guard
+    with open(hook_path, 'w', encoding='utf-8', newline='\n') as fh:
+        fh.write(script)
+    try:
+        os.chmod(hook_path, 0o755)
+    except OSError:
+        pass
+    print('installed pre-commit guardrail hook: .git/hooks/pre-commit')
 
 
 def git(args, cwd):
@@ -96,6 +133,8 @@ def main(argv):
             print('git init failed: %s' % r.stderr.strip())
             return 1
         print('git repo created (local only, no remote)')
+    if '--with-hook' in argv:
+        _install_hook(folder)
     author, email = opt('--author'), opt('--email')
     if author:
         git(['config', 'user.name', author], folder)

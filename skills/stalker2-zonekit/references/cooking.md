@@ -45,6 +45,7 @@ The shipped `PakPlainMod.bat <mod>` calls `RunUAT.bat GSCCookModOverrideContent 
   own trio.
 
 ## The fallback: the cook commandlet, retoc, zen_add_redirect
+Run `python scripts/sdk_validate_mod.py <mod>` before cooking to catch bad `.uplugin` metadata, non-asset files in `Content/`, and foreign `/Mod/` imports early.
 `python scripts/sdk_cook_mod.py <mod> [--install <folder under ~mods>] [--name <base>] [--priority <N>] [--pack-cfg]` cooks and
 packs; `--pack-only --out <dir>` packs the existing cook again (for example into a release folder). `--name` defaults to the
 mod name; `--priority` adds the `_<N>_P` tail only when given. Pass `--pack-cfg` to also pack `<mod>/Content` `.cfg` /

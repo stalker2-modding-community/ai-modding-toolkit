@@ -28,8 +28,9 @@ does to game time: stalker2-gamedata.
 1. **Extract vanilla:** `retoc to-legacy --no-shaders --no-script-objects -f <fragment> <paks> <outdir>`. The
    fragment is a case-sensitive substring of the file path (`Content/light/Curves/Clearly`, or one curve's name);
    add `-d` to count matches without writing.
-2. **Decode:** `python scripts/decode_curves.py <file.uexp> [...]` prints every key (time, value, tangents, mode
-   bytes) as JSON. Imported as a module, its `key_offsets(path)` gives each key's Value offset for in-place edits.
+2. **Decode, check and diff:** `python scripts/decode_curves.py <file.uexp> [...]` prints every key (time, value, tangents, mode
+   bytes) as JSON; `--check` flags cubic keys with non-zero tangents and `--diff <vanilla> <mod>` diffs two `.uexp`
+   files or matching folders. Imported as a module, its `key_offsets(path)` gives each key's Value offset for in-place edits.
 3. **Edit in place, same key count:** overwrite the float32 values (and tangents) at their offsets. The size stays
    the same, so the `.uasset` needs no change. Adding or removing keys changes the export size that the `.uasset`
    records: rewrite with UAssetAPI (atenfyr) or re-save in the Zone Kit (stalker2-zonekit), never by hand.

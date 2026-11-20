@@ -22,10 +22,9 @@ metadata:
 ## Read the source before tuning
 - GSC's UNCOOKED assets (full graphs, Niagara systems, source textures, real settings) are in
   `<kit>/Stalker2/Content/Paks/FullEditor-WindowsModEditor.pak`. Settings such as SRGB come from there, never from a cooked file.
-- A material's real wiring: the user copies the graph as text, you read it with `python scripts/mat_t3d.py <file> summary`;
-  that is ground truth. `python scripts/mat_uasset_tree.py <full .uasset path>` gives a first look from the saved bytes.
-  Do this BEFORE trial-and-error tuning.
-- `tools/uasset-dump/` dumps any .uasset to JSON (build once: `dotnet build -c Release`; UAssetAPI by atenfyr).
+- Material wiring ground truth: copy graph text, run `python scripts/mat_t3d.py <file> summary`. From bytes:
+  `scripts/mat_uasset_tree.py`, `scripts/uasset_scan.py` (headers/refs), or `scripts/uasset_summary.py` (via
+  `tools/uasset-dump/`, UAssetAPI by atenfyr; `dotnet build -c Release`) before tuning.
 
 ## GUI essentials
 - One launch per sitting: loading takes minutes and the open kit edits every mod (switch mods in the main toolbar). Never
@@ -57,8 +56,8 @@ metadata:
   parent-only change never reaches it (cook the children too).
 
 ## Cooking
-- The kit's own tools first (they write the redirect). Fallback: `python scripts/sdk_cook_mod.py <mod>` (the cook commandlet
-  run directly, `retoc to-zen --version UE5_5`, then the redirect).
+- Validate first (`scripts/sdk_validate_mod.py <mod>`). Cook via kit tools first (writes redirect); fallback:
+  `python scripts/sdk_cook_mod.py <mod>` (cook commandlet, `retoc to-zen --version UE5_5`, then redirect).
 - `PakPlainMod.bat` as shipped skips the cook (an EMPTY pak on a new mod) and writes a legacy pak that cannot override.
 - Never cook while the kit is open (it locks the cook's cache files); never launch the kit during a cook.
 - A second kit mod referenced by the first does not cook (the reference becomes NONE): keep linked assets in one mod.

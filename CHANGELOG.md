@@ -12,6 +12,12 @@
 - stalker2-zonekit: `scripts/sdk_code_patch.py --list` prints stored `ScalarParameter` names, defaults and counts;
   `scripts/mat_uasset_tree.py` adds `MaterialAttributesInput` walking; `scripts/sdk_cook_mod.py --pack-cfg` opts in to
   packing `.cfg`/`.cfg_patch*` files into a companion `_Cfg[_N_P].pak` via repak (or cleaning up a stale one).
+- stalker2-zonekit: added pure-stdlib `scripts/uasset_scan.py` (binary `.uasset` header/class/foreign-root & `.cfg*` folder scan),
+  `scripts/uasset_summary.py` (staged `uasset-dump` digest for Material Instances, Curves and Materials) and `scripts/sdk_validate_mod.py`
+  (pre-cook `.uplugin`, `Content/` hygiene and cross-mod reference validator).
+- stalker2-curves: `scripts/decode_curves.py` adds `--check` (flags cubic keys with non-zero tangents) and `--diff <vanilla> <mod>`.
+- stalker2-mod-setup: added `scripts/mod_guardrail.py` and `init_mod_repo.py --with-hook` for opt-in pre-commit checks
+  (blocks secrets, nested `Content/Content/`, and dev dirs in `Content/`; warns on user paths in logs/notes and unknown `Content/` files).
 
 ## 1.0.0 (2026-11-15)
 First public release, under the MIT license. 20 skills for STALKER 2 modding, an interactive installer, and an install
