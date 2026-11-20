@@ -16,6 +16,7 @@ session is needed for those edits. What it cannot do is listed below.
 ## Running a script
 `python scripts/sdk_run.py <script.py>` runs editor Python with no GUI (detached; poll with `--wait`; `--launch` returns at once).
 Output is the `LogPython:` lines of the editor log. Startup costs minutes, so batch the work into one script.
+When the GUI editor is already open, you can instead start the opt-in localhost HTTP bridge (`scripts/editor_bridge.py`) and dispatch tasks via `python scripts/sdk_run.py --bridge-action ...` or `--bridge <script.py>` without restarting the editor (pass `mod='<ModName>'` to allow `set_mi_params` writes; live GUI testing is still pending, only mock-UE tests have run so far).
 - If the launcher stub is blocked, the Cmd exe runs the same job (about 150 s with the kit closed):
   `<kit>/Stalker2/Binaries/Win64/Stalker2ModEditor-Win64-Shipping-Cmd.exe "<kit>/Stalker2/Stalker2.uproject" -run=pythonscript
   -script="<file>" -ddc=ModEditorInstalledDerivedDataBackendGraph -unattended -NoLogTimes -abslog=<log>`.

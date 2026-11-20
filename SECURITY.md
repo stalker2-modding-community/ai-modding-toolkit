@@ -18,9 +18,19 @@ Check the files you received against `SHA256SUMS.txt` (PowerShell: `Get-FileHash
 Check installed skills any time: `python install.py --verify --agent <ids>`.
 
 ## What the skills' scripts do
-Scripts run only when you, or your agent with your permission, start them. None of them reach the internet. One talks
-to a program on your own PC: `waapi.py` (stalker2-audio) sends commands to the Wwise authoring tool you have open,
-through its local port.
+Scripts run only when you, or your agent with your permission, start them. None of them reach the internet. Two talk only
+to local tools on your own PC over loopback (`127.0.0.1`):
+- `waapi.py` (stalker2-audio) sends commands to the Wwise authoring tool you have open, through its local port (`8090`).
+- `editor_bridge.py` / `sdk_run.py --bridge*` (stalker2-zonekit) is opt-in only: start it manually per sitting inside the Zone Kit
+  Output Log (`editor_bridge.start_bridge()`) and call `editor_bridge.stop_bridge()` when finished (commandlets and cooks
+  auto-skip). It opens a localhost HTTP listener on `127.0.0.1:18777` (configurable via `S2_BRIDGE_PORT`) with fail-closed
+  per-boot bearer token auth stored under an owner-only NTFS ACL (`%LOCALAPPDATA%/Stalker2/Saved/s2_editor_bridge.token`;
+  POST requests fail with HTTP 403 if the token is missing or reset). `set_mi_params` refuses all writes unless
+  `start_bridge(mod='<ModName>')` or `S2_BRIDGE_MOD` locks writes to one named mod, and `_BudgetGuard` is only a best-effort
+  speed bump around Python load/save wrappers rather than a hard sandbox. `run_script` is off by default and has no env-var
+  toggle; it is enabled only via `start_bridge(allow_run_script=True, script_root='<local dir>')`, rejects UNC/network paths,
+  confines scripts inside that local directory, and runs arbitrary Python inside the editor process (prepending the script's
+  directory to `sys.path`).
 - They find the game, the Zone Kit and ~mods with `s2paths.py`, which reads the Steam and Epic launcher files and
   the registry (read-only) and writes only its own config file in `%APPDATA%/stalker2-skill-pack/`.
 - They call external tools you installed yourself: retoc, repak, the Zone Kit editor and cook commandlet, Node,

@@ -267,7 +267,7 @@ def validate(only=None):
                     w('%s: scripts/%s uses shell=True / os.system / eval / exec' % (n, s))
                 if re.search(r'^\s*assert\s', src, re.M):
                     w('%s: scripts/%s uses assert for checks (stripped by python -O)' % (n, s))
-                if re.search(r'urllib|requests|http\.client|socket\b', src):
+                if re.search(r'urllib|requests|http\.client|http\.server|socketserver|socket\b', src):
                     w('%s: scripts/%s may use the network' % (n, s))
             if s.endswith('.mjs') and shutil.which('node'):
                 r = subprocess.run(['node', '--check', p], capture_output=True, text=True)
