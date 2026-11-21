@@ -43,8 +43,9 @@ In-game player positions are the capsule, about 92 units above the floor when st
 | Bed on a bed frame | `.../Bed/BP_Bed_OnBed`: only the mattress; the hubs set it on a separate bed-frame mesh |
 | (base class) | `/Game/GameLite/Blueprints/Interactable/Beds/BP_Bed`: abstract, error-cube mesh; do not place |
 
-Saving both into a mod's content bundle is tested (above). How a placed stash and bed behave in game, including whether that
-stash shares its inventory with the hub stashes, is untested.
+Tested in game: a placed `BP_PlayerStash` works as a personal stash, and a placed `BP_Bed_OnGround` works for sleeping. The kit's
+cook bakes a mod's placed actors into a generated World Partition cell of the mod's content bundle
+(`/<Mod>/CB/.../WorldMap_WP/_Generated_/MainGrid_...` in the mod's NewContent pak), not as the separate actor files.
 
 A blueprint's asset path: run `retoc manifest` on each `pakchunk*.utoc` in an empty folder and search the `packagename`
 entries (stalker2-paks).
