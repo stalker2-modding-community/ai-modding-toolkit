@@ -15,8 +15,9 @@ Security controls & limits:
   - Pre-queue payload & finite-timeout validation (HTTP 400 before queueing) and non-queueing
     single-slot Slate dispatch (HTTP 429 when busy, HTTP 504 on timeout; already-started tasks
     keep running on the main thread until finished).
-  - Best-effort per-task load/save speed bump (_BudgetGuard on EditorAssetLibrary/Utils,
-    max_loads <= 50, max_saves <= 10); bypassable by C++/load_object, NOT a security sandbox.
+  - Best-effort per-task load/save speed bump (_BudgetGuard explicitly counts built-in
+    bridge action loads/saves and wraps unreal.load_asset; UE 5.5 C++ library types like
+    EditorAssetLibrary are immutable so direct calls inside run_script bypass it).
   - Arbitrary script execution (run_script) stays disabled unless started explicitly with both
     allow_run_script=True and script_root="<local dir>" (no env-var toggle; UNC/network paths
     and scripts outside script_root are refused). Script dir is prepended to sys.path.
@@ -67,6 +68,7 @@ _slate_handle = None
 _allow_run_script = False
 _allowed_mod = ''
 _allowed_script_root = ''
+_active_budget = None
 
 
 def _is_network_path(path):
@@ -137,10 +139,12 @@ def is_commandlet_or_unattended():
 
 
 class _BudgetGuard:
-    """Best-effort speed bump wrapping Python load/save helpers for one main-thread task.
+    """Best-effort per-task load/save speed bump for one main-thread task.
 
-    Not a hard safety limit: direct C++ APIs, unreal.load_object, or unwrapped subsystems
-    bypass this counter.
+    Tracks built-in bridge actions explicitly and wraps module-level unreal.load_asset.
+    UE 5.5 C++ library types (EditorAssetLibrary, EditorLoadingAndSavingUtils) are immutable
+    and raise TypeError on setattr, so direct calls inside run_script bypass this counter.
+    Not a security sandbox.
     """
 
     def __init__(self, max_loads=25, max_saves=5):
@@ -149,6 +153,9 @@ class _BudgetGuard:
         self.loads = 0
         self.saves = 0
         self._originals = []
+        self._eal_load_wrapped = False
+        self._eal_save_wrapped = False
+        self._prev_budget = None
 
     def _record(self, kind, count):
         if kind == 'load':
@@ -160,9 +167,17 @@ class _BudgetGuard:
             if self.saves > self.max_saves:
                 raise RuntimeError('Asset save budget exceeded (%d/%d)' % (self.saves, self.max_saves))
 
+    def record_eal_load(self, count=1):
+        if not self._eal_load_wrapped:
+            self._record('load', count)
+
+    def record_eal_save(self, count=1):
+        if not self._eal_save_wrapped:
+            self._record('save', count)
+
     def _wrap(self, obj, attr, kind, batch_arg=None):
         if obj is None or not hasattr(obj, attr):
-            return
+            return False
         orig = getattr(obj, attr)
         self._originals.append((obj, attr, orig))
 
@@ -176,23 +191,31 @@ class _BudgetGuard:
         try:
             is_static = isinstance(getattr(obj, '__dict__', {}).get(attr), staticmethod)
             setattr(obj, attr, staticmethod(wrapped) if is_static else wrapped)
+            return True
         except TypeError:
             self._originals.pop()
+            return False
 
     def __enter__(self):
+        global _active_budget
         ue = _ue()
         eal = getattr(ue, 'EditorAssetLibrary', None)
         elsu = getattr(ue, 'EditorLoadingAndSavingUtils', None)
         self._wrap(ue, 'load_asset', 'load')
-        self._wrap(eal, 'load_asset', 'load')
-        self._wrap(eal, 'save_loaded_asset', 'save')
+        self._eal_load_wrapped = self._wrap(eal, 'load_asset', 'load')
+        self._eal_save_wrapped = self._wrap(eal, 'save_loaded_asset', 'save')
         self._wrap(eal, 'save_loaded_assets', 'save', batch_arg=0)
         self._wrap(eal, 'save_asset', 'save')
         self._wrap(eal, 'save_directory', 'save')
         self._wrap(elsu, 'save_packages', 'save', batch_arg=0)
+        self._prev_budget = _active_budget
+        _active_budget = self
         return self
 
     def __exit__(self, _exc_type, _exc_val, _exc_tb):
+        global _active_budget
+        _active_budget = self._prev_budget
+        self._prev_budget = None
         for obj, attr, orig in reversed(self._originals):
             try:
                 setattr(obj, attr, orig)
@@ -306,6 +329,8 @@ def _action_inspect_mi(payload):
     asset_path = str(payload.get('asset') or '').strip()
     if not asset_path.startswith('/'):
         return {'status': 'error', 'error': 'asset package path must start with /'}
+    if _active_budget is not None:
+        _active_budget.record_eal_load(1)
     mi = ue.EditorAssetLibrary.load_asset(asset_path)
     if mi is None:
         return {'status': 'error', 'error': 'asset not found: %s' % asset_path}
@@ -344,23 +369,30 @@ def _action_set_mi_params(payload):
     asset_path = str(payload.get('asset') or '').strip()
     if not _is_allowed_mod_package(asset_path, _allowed_mod):
         return {'status': 'error', 'error': 'refusing write outside allowed mod /%s/: %s' % (_allowed_mod, asset_path)}
+    if _active_budget is not None:
+        _active_budget.record_eal_load(1)
     mi = ue.EditorAssetLibrary.load_asset(asset_path)
     if mi is None:
         return {'status': 'error', 'error': 'asset not found: %s' % asset_path}
     mel = ue.MaterialEditingLibrary
+    tx_cls = getattr(ue, 'ScopedEditorTransaction', None)
+    tx_ctx = tx_cls('S2 Bridge: Set Material Instance Params') if callable(tx_cls) else contextlib.nullcontext()
     updated_scalars = {}
-    for k, v in (payload.get('scalars') or {}).items():
-        mel.set_material_instance_scalar_parameter_value(mi, str(k), float(v))
-        updated_scalars[str(k)] = float(mel.get_material_instance_scalar_parameter_value(mi, str(k)))
     updated_vectors = {}
-    for k, rgba in (payload.get('vectors') or {}).items():
-        r, g, b, a = [float(x) for x in rgba]
-        mel.set_material_instance_vector_parameter_value(mi, str(k), ue.LinearColor(r, g, b, a))
-        out_c = mel.get_material_instance_vector_parameter_value(mi, str(k))
-        updated_vectors[str(k)] = [float(out_c.r), float(out_c.g), float(out_c.b), float(out_c.a)]
-    mel.update_material_instance(mi)
+    with tx_ctx:
+        for k, v in (payload.get('scalars') or {}).items():
+            mel.set_material_instance_scalar_parameter_value(mi, str(k), float(v))
+            updated_scalars[str(k)] = float(mel.get_material_instance_scalar_parameter_value(mi, str(k)))
+        for k, rgba in (payload.get('vectors') or {}).items():
+            r, g, b, a = [float(x) for x in rgba]
+            mel.set_material_instance_vector_parameter_value(mi, str(k), ue.LinearColor(r, g, b, a))
+            out_c = mel.get_material_instance_vector_parameter_value(mi, str(k))
+            updated_vectors[str(k)] = [float(out_c.r), float(out_c.g), float(out_c.b), float(out_c.a)]
+        mel.update_material_instance(mi)
     saved = False
     if payload.get('save'):
+        if _active_budget is not None:
+            _active_budget.record_eal_save(1)
         saved = bool(ue.EditorAssetLibrary.save_loaded_asset(mi))
     return {'status': 'ok', 'asset': asset_path, 'scalars': updated_scalars, 'vectors': updated_vectors, 'saved': saved}
 
