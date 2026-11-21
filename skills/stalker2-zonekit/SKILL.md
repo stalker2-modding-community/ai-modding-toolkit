@@ -86,3 +86,4 @@ a ShaderCompileWorker crash closes the editor, or the launcher stub is refused. 
 - references/paste-text.md: before generating socket, AnimCollection or other Details-panel paste text.
 - references/harness-notes.md: before researching a game system in the kit, or adding NEW (non-override) content.
 - references/meshes.md: before reimporting a mesh whose source path is gone.
+- references/world-actors.md: before adding an object to the open world (stash, bed, prop), or when a cfg-spawned one fails.
