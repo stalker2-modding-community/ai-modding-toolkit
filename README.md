@@ -34,6 +34,7 @@ install. See [SECURITY.md](SECURITY.md).
 | [Noah Semus](https://github.com/noahsemus) | The [Stalker 2 modding harness](https://github.com/noahsemus/stalker2-modding-harness): Blueprint paste tooling and traps, game facts, player animation, the mod settings menu notes, cook classifier rules |
 | [sdwvit](https://github.com/sdwvit) | cfg reference, gameplay data, combat, console commands, saves, localization, voice-over, Wwise audio, publishing, Linux, cook performance; and [s2cfgtojson](https://github.com/sdwvit/S2CfgToJSON), which the cfg tools run on |
 | [gjacka](https://github.com/gjacka) | Paks and IoStore, cfg patch rules and linting, the Zone Kit and cooking, crashes, testing, updates, Vortex, releasing, the installer |
+| [Felicheat](https://github.com/Felicheat) | Installer `--exclude` and the `zonekit` preset, kit path search, Niagara reader support for older files, material tools, the optional cfg companion pak, offline asset scanner and summary, pre-cook mod validator, curve check and diff, the optional commit guard |
 
 Everyone whose tools the skills rely on is listed in [CREDITS.md](CREDITS.md).
 
