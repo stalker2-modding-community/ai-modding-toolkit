@@ -1,7 +1,8 @@
 r"""First look at a material's wiring as formulas, straight from a saved .uasset (no editor, no graph copy needed).
 
 It reads the links from the raw export bytes (an ExpressionInput's source index sits 49 bytes after its name tag, a
-CustomInput's 57 bytes after its InputName), walks back from every root pin and from a custom output node (Volumetric
+CustomInput's 57 bytes after its InputName), walks back from every root pin (including MaterialAttributes inputs on
+bUseMaterialAttributes materials) and from a custom output node (Volumetric
 Advanced Output, Single Layer Water Output), and prints each expression once (shared sub-expressions as @N), with Custom
 node code, parameter names and defaults. It is a byte-pattern reader and can miss links: for the real wiring copy the
 graph out of the material editor as text and read it with mat_t3d.py, which is the ground truth.
@@ -16,7 +17,7 @@ import os, sys, json, shutil, struct, subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import s2paths
 
-KINDS = {'ExpressionInput', 'ScalarMaterialInput', 'ColorMaterialInput', 'VectorMaterialInput', 'Vector2MaterialInput'}
+KINDS = {'ExpressionInput', 'MaterialAttributesInput', 'ScalarMaterialInput', 'ColorMaterialInput', 'VectorMaterialInput', 'Vector2MaterialInput'}
 SKIP_PROPS = {'MaterialExpressionEditorX', 'MaterialExpressionEditorY', 'MaterialExpressionGuid', 'ExpressionGUID', 'Material', 'Inputs',
               'Code', 'Description', 'Outputs', 'bRealtimePreview', 'bCollapsed', 'SortPriority', 'Desc'}
 
@@ -161,7 +162,8 @@ def main():
     for k in roots + advanced:
         seen_pins = set()
         for pin, v in L[k]:
-            if pin in seen_pins:
+            # CustomizedUVs is a fixed array on MaterialEditorOnlyData; the +49 byte scan misreads its slots as false links.
+            if pin in seen_pins or (k in roots and pin == 'CustomizedUVs'):
                 continue
             seen_pins.add(pin)
             out.append('%s.%s = %s' % ('ROOT' if k in roots else 'ADVANCED', pin, expr(v)))

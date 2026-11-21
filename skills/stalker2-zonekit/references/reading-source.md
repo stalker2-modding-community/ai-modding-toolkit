@@ -3,6 +3,7 @@
 ## Contents
 - The uncooked editor pak
 - uasset-dump
+- Compact digests: uasset_summary and uasset_scan
 - Settings come from uncooked sources (and the SRGB tag rule)
 - A material's real wiring: graph text and mat_t3d
 - A saved material: mat_uasset_tree
@@ -35,6 +36,12 @@ Niagara systems, source textures and the real property values. It is a plain .pa
   offset" below; for Niagara values copy the module as text and decode it with
   `scripts/niagara_clipboard.py`.
 - Export `SerialOffset` / `SerialSize` give each node's byte range in the .uasset: patch targets are found inside that range.
+
+## Compact digests: uasset_summary and uasset_scan
+- `python scripts/uasset_scan.py [<dir>] [--filter <str>] [--cross-mod <mod>] [--limit 50]` parses binary `FPackageFileSummary` / `ImportMap` / `ExportMap` headers plus loose `.cfg` / `.cfg_patch*` files with zero external tools; use it first for quick asset-class and foreign `/Mod/` root triage.
+- `python scripts/mat_uasset_tree.py <full .uasset path>` reads saved Material/MI binary bytes directly for parent-chain and parameter hierarchy inspection before opening the GUI.
+- `tools/uasset-dump/` (`dotnet build -c Release`) dumps full `.uasset` JSON via UAssetAPI when you need every property name or `SerialOffset` / `SerialSize` byte range.
+- `python scripts/uasset_summary.py <file.uasset|file.json> [--material] [--json]` stages a temporary copy, runs `uasset-dump`, and prints only structural imports, Material Instance parameters, Curve keys (flagging cubic non-zero tangents), or `--material` parameters and Custom HLSL line counts instead of raw multi-MB JSON.
 
 ## Settings come from uncooked sources
 - Texture and asset SETTINGS (SRGB, Filter, CompressionSettings, LODBias, component defaults) must be read from the uncooked

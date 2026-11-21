@@ -7,17 +7,18 @@ when the editor is closed.
 
 Security controls & limits:
   - Binds loopback 127.0.0.1:18777 only (overridable with S2_BRIDGE_PORT).
-  - Fail-closed per-boot random bearer token (header X-S2-Bridge-Token), locked on Windows
-    via icacls to the current user account; HTTP POST rejects with 403 if the token is empty
-    or stale (e.g. after a module reload).
+  - Fail-closed per-boot random bearer token (header X-S2-Bridge-Token); icacls strips
+    inherited NTFS ACEs and grants full control to the current user (SYSTEM and
+    Administrators keep access; other local users do not). HTTP POST rejects with 403 if the
+    token is empty or stale (e.g. after a module reload).
   - Single-mod write lock: set_mi_params refuses all writes unless start_bridge(mod="<Mod>")
     or S2_BRIDGE_MOD names the allowed mod root (other mods and /Game/ are refused).
   - Pre-queue payload & finite-timeout validation (HTTP 400 before queueing) and non-queueing
     single-slot Slate dispatch (HTTP 429 when busy, HTTP 504 on timeout; already-started tasks
     keep running on the main thread until finished).
-  - Best-effort per-task load/save speed bump (_BudgetGuard explicitly counts built-in
-    bridge action loads/saves and wraps unreal.load_asset; UE 5.5 C++ library types like
-    EditorAssetLibrary are immutable so direct calls inside run_script bypass it).
+  - Per-task load/save limits (max_loads <= 50, max_saves <= 10) counted inside the built-in
+    actions (inspect_material_instance, set_mi_params). run_script is NOT limited by these
+    load/save budgets.
   - Arbitrary script execution (run_script) stays disabled unless started explicitly with both
     allow_run_script=True and script_root="<local dir>" (no env-var toggle; UNC/network paths
     and scripts outside script_root are refused). Script dir is prepended to sys.path.
@@ -139,12 +140,9 @@ def is_commandlet_or_unattended():
 
 
 class _BudgetGuard:
-    """Best-effort per-task load/save speed bump for one main-thread task.
+    """Explicit per-task load/save counter for built-in bridge actions.
 
-    Tracks built-in bridge actions explicitly and wraps module-level unreal.load_asset.
-    UE 5.5 C++ library types (EditorAssetLibrary, EditorLoadingAndSavingUtils) are immutable
-    and raise TypeError on setattr, so direct calls inside run_script bypass this counter.
-    Not a security sandbox.
+    run_script is not limited by these counters.
     """
 
     def __init__(self, max_loads=25, max_saves=5):
@@ -152,62 +150,20 @@ class _BudgetGuard:
         self.max_saves = min(max(0, int(max_saves)), MAX_SAVE_CAP)
         self.loads = 0
         self.saves = 0
-        self._originals = []
-        self._eal_load_wrapped = False
-        self._eal_save_wrapped = False
         self._prev_budget = None
 
-    def _record(self, kind, count):
-        if kind == 'load':
-            self.loads += count
-            if self.loads > self.max_loads:
-                raise RuntimeError('Asset load budget exceeded (%d/%d)' % (self.loads, self.max_loads))
-        else:
-            self.saves += count
-            if self.saves > self.max_saves:
-                raise RuntimeError('Asset save budget exceeded (%d/%d)' % (self.saves, self.max_saves))
+    def record_load(self, count=1):
+        self.loads += count
+        if self.loads > self.max_loads:
+            raise RuntimeError('Asset load budget exceeded (%d/%d)' % (self.loads, self.max_loads))
 
-    def record_eal_load(self, count=1):
-        if not self._eal_load_wrapped:
-            self._record('load', count)
-
-    def record_eal_save(self, count=1):
-        if not self._eal_save_wrapped:
-            self._record('save', count)
-
-    def _wrap(self, obj, attr, kind, batch_arg=None):
-        if obj is None or not hasattr(obj, attr):
-            return False
-        orig = getattr(obj, attr)
-        self._originals.append((obj, attr, orig))
-
-        def wrapped(*args, **kwargs):
-            cnt = 1
-            if batch_arg is not None and len(args) > batch_arg and isinstance(args[batch_arg], (list, tuple, set)):
-                cnt = max(1, len(args[batch_arg]))
-            self._record(kind, cnt)
-            return orig(*args, **kwargs)
-
-        try:
-            is_static = isinstance(getattr(obj, '__dict__', {}).get(attr), staticmethod)
-            setattr(obj, attr, staticmethod(wrapped) if is_static else wrapped)
-            return True
-        except TypeError:
-            self._originals.pop()
-            return False
+    def record_save(self, count=1):
+        self.saves += count
+        if self.saves > self.max_saves:
+            raise RuntimeError('Asset save budget exceeded (%d/%d)' % (self.saves, self.max_saves))
 
     def __enter__(self):
         global _active_budget
-        ue = _ue()
-        eal = getattr(ue, 'EditorAssetLibrary', None)
-        elsu = getattr(ue, 'EditorLoadingAndSavingUtils', None)
-        self._wrap(ue, 'load_asset', 'load')
-        self._eal_load_wrapped = self._wrap(eal, 'load_asset', 'load')
-        self._eal_save_wrapped = self._wrap(eal, 'save_loaded_asset', 'save')
-        self._wrap(eal, 'save_loaded_assets', 'save', batch_arg=0)
-        self._wrap(eal, 'save_asset', 'save')
-        self._wrap(eal, 'save_directory', 'save')
-        self._wrap(elsu, 'save_packages', 'save', batch_arg=0)
         self._prev_budget = _active_budget
         _active_budget = self
         return self
@@ -216,12 +172,6 @@ class _BudgetGuard:
         global _active_budget
         _active_budget = self._prev_budget
         self._prev_budget = None
-        for obj, attr, orig in reversed(self._originals):
-            try:
-                setattr(obj, attr, orig)
-            except Exception:
-                pass
-        self._originals.clear()
 
 
 def _lock_token_acl(path):
@@ -330,7 +280,7 @@ def _action_inspect_mi(payload):
     if not asset_path.startswith('/'):
         return {'status': 'error', 'error': 'asset package path must start with /'}
     if _active_budget is not None:
-        _active_budget.record_eal_load(1)
+        _active_budget.record_load(1)
     mi = ue.EditorAssetLibrary.load_asset(asset_path)
     if mi is None:
         return {'status': 'error', 'error': 'asset not found: %s' % asset_path}
@@ -370,29 +320,26 @@ def _action_set_mi_params(payload):
     if not _is_allowed_mod_package(asset_path, _allowed_mod):
         return {'status': 'error', 'error': 'refusing write outside allowed mod /%s/: %s' % (_allowed_mod, asset_path)}
     if _active_budget is not None:
-        _active_budget.record_eal_load(1)
+        _active_budget.record_load(1)
     mi = ue.EditorAssetLibrary.load_asset(asset_path)
     if mi is None:
         return {'status': 'error', 'error': 'asset not found: %s' % asset_path}
     mel = ue.MaterialEditingLibrary
-    tx_cls = getattr(ue, 'ScopedEditorTransaction', None)
-    tx_ctx = tx_cls('S2 Bridge: Set Material Instance Params') if callable(tx_cls) else contextlib.nullcontext()
     updated_scalars = {}
+    for k, v in (payload.get('scalars') or {}).items():
+        mel.set_material_instance_scalar_parameter_value(mi, str(k), float(v))
+        updated_scalars[str(k)] = float(mel.get_material_instance_scalar_parameter_value(mi, str(k)))
     updated_vectors = {}
-    with tx_ctx:
-        for k, v in (payload.get('scalars') or {}).items():
-            mel.set_material_instance_scalar_parameter_value(mi, str(k), float(v))
-            updated_scalars[str(k)] = float(mel.get_material_instance_scalar_parameter_value(mi, str(k)))
-        for k, rgba in (payload.get('vectors') or {}).items():
-            r, g, b, a = [float(x) for x in rgba]
-            mel.set_material_instance_vector_parameter_value(mi, str(k), ue.LinearColor(r, g, b, a))
-            out_c = mel.get_material_instance_vector_parameter_value(mi, str(k))
-            updated_vectors[str(k)] = [float(out_c.r), float(out_c.g), float(out_c.b), float(out_c.a)]
-        mel.update_material_instance(mi)
+    for k, rgba in (payload.get('vectors') or {}).items():
+        r, g, b, a = [float(x) for x in rgba]
+        mel.set_material_instance_vector_parameter_value(mi, str(k), ue.LinearColor(r, g, b, a))
+        out_c = mel.get_material_instance_vector_parameter_value(mi, str(k))
+        updated_vectors[str(k)] = [float(out_c.r), float(out_c.g), float(out_c.b), float(out_c.a)]
+    mel.update_material_instance(mi)
     saved = False
     if payload.get('save'):
         if _active_budget is not None:
-            _active_budget.record_eal_save(1)
+            _active_budget.record_save(1)
         saved = bool(ue.EditorAssetLibrary.save_loaded_asset(mi))
     return {'status': 'ok', 'asset': asset_path, 'scalars': updated_scalars, 'vectors': updated_vectors, 'saved': saved}
 

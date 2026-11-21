@@ -28,7 +28,7 @@ Every NiagaraScript export keeps them in `RapidIterationParameters`: a list of n
 - Checked on two kit-mod systems (1,429 and 292 values): identical, line for line, to a second reader that works from a
   uasset-dump JSON.
 - A constant appears once per script that uses it (spawn, update, GPU compute).
-- Uncooked assets only (file version UE5 1012 or newer). It reads; it does not write.
+- Uncooked assets only (file version UE5 1008 or newer: tested on 1008 pre-2.0 and 1013 2.0/2.1 assets; 1009..1011 share the legacy tag path and are untested on real assets). It reads; it does not write.
 - It shows constants only. What an input is LINKED to, dynamic inputs and expression text are not in these stores: use the
   clipboard route below. uasset-dump itself does not decode the stores, and headless Python cannot read them.
 

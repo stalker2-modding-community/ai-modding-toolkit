@@ -45,12 +45,16 @@ The shipped `PakPlainMod.bat <mod>` calls `RunUAT.bat GSCCookModOverrideContent 
   own trio.
 
 ## The fallback: the cook commandlet, retoc, zen_add_redirect
-`python scripts/sdk_cook_mod.py <mod> [--install <folder under ~mods>] [--name <base>] [--priority <N>]` cooks and packs;
-`--pack-only --out <dir>` packs the existing cook again (for example into a release folder). `--name` defaults to the mod name;
-`--priority` adds the `_<N>_P` tail only when given. Mod names must match `^[A-Za-z0-9_]+$`. Judge the run by its result (exit
-code, the files, the game), never by a grep of its output. The script stops before packing when the cook log holds `Failed to
-compile Material` / `Default Material will be used`, or a Niagara script error (a `LogNiagara` line with `Error`, `Unknown
-Function Call`, or a Niagara `failed to compile`).
+Run `python scripts/sdk_validate_mod.py <mod>` before cooking to catch bad `.uplugin` metadata, non-asset files in `Content/`, and foreign `/Mod/` imports early.
+`python scripts/sdk_cook_mod.py <mod> [--install <folder under ~mods>] [--name <base>] [--priority <N>] [--pack-cfg]` cooks and
+packs; `--pack-only --out <dir>` packs the existing cook again (for example into a release folder). `--name` defaults to the
+mod name; `--priority` adds the `_<N>_P` tail only when given. Pass `--pack-cfg` to also pack `<mod>/Content` `.cfg` /
+`.cfg_patch*` files via `repak pack --version V11` into `<base>_Cfg[_<N>_P].pak` (matching priority, printing packed files,
+warning on `@BaseGame/` refurls since plain-pak loading with `@BaseGame/` is untested in game, and deleting a stale `_Cfg`
+pak if all cfgs are later removed); without `--pack-cfg`, existing `_Cfg` paks are left alone. Mod names must match
+`^[A-Za-z0-9_]+$`. Judge the run by its result (exit code, the files, the game), never by a grep of its output. The script
+stops before packing when the cook log holds `Failed to compile Material` / `Default Material will be used`, or a Niagara
+script error (a `LogNiagara` line with `Error`, `Unknown Function Call`, or a Niagara `failed to compile`).
 
 What it runs, if you ever need it by hand:
 1. The cook commandlet, directly (the arguments UAT passes, taken from its log):

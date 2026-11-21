@@ -24,14 +24,14 @@ to local tools on your own PC over loopback (`127.0.0.1`):
 - `editor_bridge.py` / `sdk_run.py --bridge*` (stalker2-zonekit) is opt-in only: start it manually per sitting inside the Zone Kit
   Output Log (`editor_bridge.start_bridge()`) and call `editor_bridge.stop_bridge()` when finished (commandlets and cooks
   auto-skip). It opens a localhost HTTP listener on `127.0.0.1:18777` (configurable via `S2_BRIDGE_PORT`) with fail-closed
-  per-boot bearer token auth (`%LOCALAPPDATA%/Stalker2/Saved/s2_editor_bridge.token`, inherited NTFS ACEs stripped via `icacls`
-  and full control granted to the current user; POST requests fail with HTTP 403 if the token is missing or reset).
-  `set_mi_params` refuses all writes unless `start_bridge(mod='<ModName>')` or `S2_BRIDGE_MOD` locks writes to one named mod,
-  and `_BudgetGuard` explicitly counts built-in bridge action loads/saves plus `unreal.load_asset` (UE 5.5 C++ library classes
-  like `EditorAssetLibrary` are immutable, so direct calls inside `run_script` bypass it). `run_script` is off by default and
-  has no env-var toggle; it is enabled only via `start_bridge(allow_run_script=True, script_root='<local dir>')`, rejects
-  UNC/network paths, confines scripts inside that local directory, and runs arbitrary Python inside the editor process
-  (prepending the script's directory to `sys.path`).
+  per-boot bearer token auth (`%LOCALAPPDATA%/Stalker2/Saved/s2_editor_bridge.token`; `icacls /inheritance:r` strips inherited
+  ACEs and grants full control to the current user, while `SYSTEM` and `Administrators` keep access and other local users do
+  not; POST requests fail with HTTP 403 if the token is missing or reset). `set_mi_params` refuses all writes unless
+  `start_bridge(mod='<ModName>')` or `S2_BRIDGE_MOD` locks writes to one named mod. Load/save limits apply only to the built-in
+  bridge actions; `run_script` is not limited by load/save budgets. `run_script` is off by default and has no env-var toggle;
+  it is enabled only via `start_bridge(allow_run_script=True, script_root='<local dir>')`, rejects UNC/network paths, confines
+  scripts inside that local directory, and runs arbitrary Python inside the editor process (prepending the script's directory
+  to `sys.path`).
 - They find the game, the Zone Kit and ~mods with `s2paths.py`, which reads the Steam and Epic launcher files and
   the registry (read-only) and writes only its own config file in `%APPDATA%/stalker2-skill-pack/`.
 - They call external tools you installed yourself: retoc, repak, the Zone Kit editor and cook commandlet, Node,

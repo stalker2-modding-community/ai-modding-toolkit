@@ -3,7 +3,7 @@ r"""Find the STALKER 2 game, the Zone Kit, ~mods and the modding tools for the p
 Each path is looked up when a script first needs it, in this order:
   1. an environment variable (S2_GAME_DIR, S2_ZONEKIT_DIR, S2_MODS_DIR, S2_TOOLS_DIR, S2_WORK_DIR, S2_UASSET_DUMP)
   2. the pack's config file (see CONFIG_FILE below; written by `--write`)
-  3. auto-detection (Steam library folders for the game, Epic launcher manifests for the Zone Kit, PATH for tools)
+  3. auto-detection (Steam library folders for the game; walking up from the script and working folders then Epic launcher manifests for the Zone Kit; PATH for tools)
 If nothing is found the script stops with a message that says how to fix it.
 
   python s2paths.py            table of every path and where it came from
@@ -128,6 +128,20 @@ def _detect_game():
 
 
 def _detect_kit():
+    seen = set()
+    for start in (os.path.abspath(_HERE), os.getcwd()):
+        cur = os.path.abspath(start)
+        while True:
+            key = os.path.normcase(cur)
+            if key in seen:
+                break
+            seen.add(key)
+            if os.path.isfile(os.path.join(cur, 'Stalker2', 'Stalker2.uproject')):
+                return cur
+            parent = os.path.dirname(cur)
+            if parent == cur:
+                break
+            cur = parent
     base = os.environ.get('PROGRAMDATA') or os.environ.get('ALLUSERSPROFILE')
     if not base:
         return None

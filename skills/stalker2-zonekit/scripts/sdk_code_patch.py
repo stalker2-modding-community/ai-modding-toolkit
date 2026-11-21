@@ -154,10 +154,15 @@ def main():
     if '--list' in a:
         for k in sorted(n for n in nodes if n):
             for e in nodes[k]:
-                print('  %-24s %5d bytes%s' % (k, len(props(e)['Code']['Value']), '   (title used twice)' if len(nodes[k]) > 1 else ''))
+                print('  Custom   %-24s %5d bytes%s' % (k, len(props(e)['Code']['Value']), '   (title used twice)' if len(nodes[k]) > 1 else ''))
         untitled = len(nodes.get(None, []))
         if untitled:
             print('  (%d Custom node(s) without a title: give them one in the editor to patch them)' % untitled)
+        sc = scalars(d)
+        for k in sorted(sc):
+            exps = [x for x in d.get('Exports') or [] if x.get('ObjectName') in sc[k]]
+            vals = [props(x).get('DefaultValue', {}).get('Value') for x in exps]
+            print('  Scalar   %-24s = %s (x%d)' % (k, vals[0] if vals else 'None', len(sc[k])))
         return 0
     if '--show' in a:
         title = flag_value(a, '--show')[0]

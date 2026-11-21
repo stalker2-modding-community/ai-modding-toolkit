@@ -14,16 +14,18 @@ Check Out Assets) or, for assets already in the mod, with headless editor Python
 in <kit>/Stalker2/Mods/<mod>. It stops, before packing, when the cook log reports a material that failed to compile (the
 game would draw the default grid material) or a Niagara script error (the system would draw nothing).
 
-    python sdk_cook_mod.py <mod>                                   cook + pack, output in the work folder
-    python sdk_cook_mod.py <mod> --install "<folder in ~mods>" [--name <base>] [--priority <N>]
-    python sdk_cook_mod.py <mod> --pack-only --out <dir> [--name <base>] [--priority <N>]    pack the existing cook
+    python sdk_cook_mod.py <mod> [--pack-cfg]                     cook + pack, output in the work folder
+    python sdk_cook_mod.py <mod> --install "<folder in ~mods>" [--name <base>] [--priority <N>] [--pack-cfg]
+    python sdk_cook_mod.py <mod> --pack-only --out <dir> [--name <base>] [--priority <N>] [--pack-cfg]  pack existing cook
     add --clean-cooked (not with --pack-only) to delete <kit>/Stalker2/SavedMods/Cooked/<mod> before cooking
 
 --install takes a folder name inside the game's ~mods (created if missing); it must stay inside ~mods. --name defaults to
 the mod name. Mod and --name use only letters, digits and underscores. --priority adds the _<N>_P tail; leave it off unless
-the mod needs one (decide per mod, see the stalker2-paks skill). The cook never clears its old output, so an asset you
-removed from the mod is packed again: use --clean-cooked after removing assets. About two and a half minutes for a cook.
-Needs the Zone Kit and retoc (see s2paths.py) and the cityhash module (pip install cityhash).
+the mod needs one (decide per mod, see the stalker2-paks skill). --pack-cfg opts in to packing <mod>/Content/*.cfg* into a
+companion <base>_Cfg[_<N>_P].pak via repak (or deleting a stale one if no cfgs remain; plain paks with @BaseGame/ refurls
+warn because they are untested in game). The cook never clears its old output, so an asset you removed from the mod is
+packed again: use --clean-cooked after removing assets. About two and a half minutes for a cook.
+Needs the Zone Kit and retoc (see s2paths.py) and the cityhash module (pip install cityhash); --pack-cfg also needs repak.
 """
 import os, re, shutil, subprocess, sys
 
@@ -174,6 +176,54 @@ def install_dir(folder):
     return target
 
 
+def _cfg_pak_name(base, priority):
+    return '%s_Cfg_%s_P.pak' % (base, priority) if priority else '%s_Cfg.pak' % base
+
+
+def pack_cfg(mod, base, priority, out_dir, repak=None):
+    """Pack any .cfg or .cfg_patch* files under Content/ into a companion _Cfg[_<N>_P].pak via repak."""
+    out_pak = os.path.join(out_dir, _cfg_pak_name(base, priority))
+    content = os.path.join(kit_paths()['kit'], 'Stalker2', 'Mods', mod, 'Content')
+    cfgs = []
+    if os.path.isdir(content):
+        for root, dirs, files in os.walk(content):
+            dirs.sort()
+            for f in sorted(files):
+                ext = os.path.splitext(f)[1].lower()
+                if ext == '.cfg' or ext.startswith('.cfg_patch'):
+                    cfgs.append(os.path.join(root, f))
+    if not cfgs:
+        if os.path.isfile(out_pak):
+            os.remove(out_pak)
+            print('  removed stale cfg pak: %s (no cfg files in Content/)' % out_pak)
+        return None
+    if repak is None:
+        repak = s2paths.tool('repak')
+    work = os.path.join(s2paths.work_dir(), 'cfg_' + mod)
+    shutil.rmtree(work, ignore_errors=True)
+    try:
+        for src in cfgs:
+            rel = os.path.relpath(src, content)
+            rel_posix = rel.replace('\\', '/')
+            dst = os.path.join(work, 'Stalker2', 'Content', rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copyfile(src, dst)
+            print('  cfg: Stalker2/Content/%s' % rel_posix)
+            with open(src, encoding='utf-8', errors='replace') as fh:
+                if '@BaseGame/' in fh.read():
+                    print('  WARN: %s contains @BaseGame/ refurl (plain paks may need relative refurls; verify in game)' % rel_posix)
+        os.makedirs(out_dir, exist_ok=True)
+        if os.path.exists(out_pak):
+            os.remove(out_pak)
+        r = subprocess.run([repak, 'pack', '--version', 'V11', work, out_pak], capture_output=True, text=True)
+        if r.returncode or not os.path.isfile(out_pak):
+            raise SystemExit('repak pack failed for cfg companion pak: ' + (r.stdout + r.stderr).strip())
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    print('  out: %s (%d bytes, %d cfg file(s))' % (out_pak, os.path.getsize(out_pak), len(cfgs)))
+    return out_pak
+
+
 def arg(args, flag, default=None):
     if flag not in args:
         return default
@@ -197,20 +247,30 @@ def main():
     if priority is not None and not priority.isdigit():
         raise SystemExit('--priority must be a whole number, got %r' % priority)
     name = base + ('_%s_P' % priority if priority else '')
+    want_cfg = '--pack-cfg' in args
     if '--pack-only' in args:
         if '--clean-cooked' in args:
             raise SystemExit('--clean-cooked deletes the cook that --pack-only would pack: use one or the other')
         out_dir = arg(args, '--out')
         if not out_dir:
             raise SystemExit('--pack-only needs --out <dir>')
+        repak = s2paths.tool('repak') if want_cfg else None
         pack(mod, name, out_dir)
-        return 0
-    folder = arg(args, '--install')
-    out_dir = install_dir(folder) if folder else os.path.join(s2paths.work_dir(), 'out_' + mod)
-    if '--clean-cooked' in args:
-        clean_cooked(mod)
-    cook(mod)
-    pack(mod, name, out_dir)
+    else:
+        folder = arg(args, '--install')
+        out_dir = install_dir(folder) if folder else os.path.join(s2paths.work_dir(), 'out_' + mod)
+        repak = s2paths.tool('repak') if want_cfg else None
+        if '--clean-cooked' in args:
+            clean_cooked(mod)
+        cook(mod)
+        pack(mod, name, out_dir)
+    if want_cfg:
+        pack_cfg(mod, base, priority, out_dir, repak=repak)
+    else:
+        stale_cfg = os.path.join(out_dir, _cfg_pak_name(base, priority))
+        if os.path.isfile(stale_cfg):
+            print('  NOTE: existing %s in %s was left untouched (pass --pack-cfg to update/remove it)'
+                  % (os.path.basename(stale_cfg), out_dir))
     return 0
 
 

@@ -36,7 +36,8 @@ Ask where the mod is. Common places: the Vortex staging folder (by default `%APP
 ## 3. Build a local repo for each mod
 Ask where it should live; suggest `Documents/STALKER2 Mods/<ModName>/`. Then
 `python scripts/init_mod_repo.py <folder> --name "<Mod name>" [--author "<name>"]`. It creates the layout below, runs `git init`
-and makes the first commit. It never overwrites a file and never adds a remote.
+and makes the first commit. It never overwrites a file and never adds a remote. Pass `--with-hook` to install an opt-in
+pre-commit hook running `scripts/mod_guardrail.py` (blocks secrets, nested `Content/Content/`, and dev dirs in `Content/`; warns on user-path leaks in notes/logs and unknown `Content/` files).
 
 | Path | Holds |
 |---|---|

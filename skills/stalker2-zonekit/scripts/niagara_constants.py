@@ -7,9 +7,10 @@ plus the packed values, ParameterData). Read-only: it opens one file for reading
 usage: python niagara_constants.py <system or emitter .uasset> [filter substring]
 
 One line per value: `Constants.<Emitter>.<Module>.<Input> [type] = value`, grouped by script. A constant appears once
-per script that uses it (spawn, update, GPU compute). Limits: uncooked assets with file version UE5 1012 or newer; it
-shows constants only, not what an input is linked to, not dynamic inputs and not expression text (copy those from the
-editor, see references/niagara.md).
+per script that uses it (spawn, update, GPU compute). Limits: uncooked assets with file version UE5 1008 or newer
+(tested on 1008 pre-2.0 assets and 1013 2.0/2.1 assets; 1009..1011 share the pre-1012 legacy tag layout in code and are
+untested on real assets); it shows constants only, not what an input is linked to, not dynamic inputs and not expression
+text (copy those from the editor, see references/niagara.md).
 """
 import struct
 import sys
@@ -31,8 +32,9 @@ class Package:
         tag, legacy, _ue3, _ue4, ue5, _lic = struct.unpack_from('<Iiiiii', raw, 0)
         if tag != 0x9E2A83C1:
             raise SystemExit('not a UE package (bad tag)')
-        if ue5 < 1012:
-            raise SystemExit('file version UE5 %d is older than 1012 (complete type names): not supported' % ue5)
+        if ue5 < 1008:
+            raise SystemExit('file version UE5 %d is older than 1008: not supported' % ue5)
+        self.ue5 = ue5
         p = 24
         (custom,) = struct.unpack_from('<i', raw, p)
         p += 4 + custom * 20
@@ -47,6 +49,7 @@ class Package:
         exp_count, exp_off = struct.unpack_from('<ii', raw, p)
         p += 8
         imp_count, imp_off = struct.unpack_from('<ii', raw, p)
+        (depends_off,) = struct.unpack_from('<i', raw, p + 8)
         for label, cnt, off in (('name', name_count, name_off), ('export', exp_count, exp_off), ('import', imp_count, imp_off)):
             if not (0 < cnt < 5_000_000 and 0 < off < len(raw)):
                 raise SystemExit('implausible %s table (count %d, offset %d): header layout differs' % (label, cnt, off))
@@ -59,9 +62,19 @@ class Package:
         self.imports = []
         for i in range(imp_count):
             self.imports.append(self.fname(raw, imp_off + i * 40 + 20))
+        default_stride = 112 if ue5 >= 1012 else 96
+        if depends_off > exp_off:
+            span = depends_off - exp_off
+            if span % exp_count == 0 and (span // exp_count) in (96, 112):
+                exp_stride = span // exp_count
+            else:
+                raise SystemExit('implausible export stride (span %d, count %d, ue5 %d): header layout differs'
+                                 % (span, exp_count, ue5))
+        else:
+            exp_stride = default_stride
         self.exports = []
         for i in range(exp_count):
-            e = exp_off + i * 112
+            e = exp_off + i * exp_stride
             cls, _sup, _tpl, outer = struct.unpack_from('<iiii', raw, e)
             size, off = struct.unpack_from('<qq', raw, e + 28)
             self.exports.append({'class': cls, 'outer': outer, 'name': self.fname(raw, e + 16), 'size': size, 'off': off})
@@ -88,26 +101,49 @@ class Package:
 
 
 def read_tag(pkg, b, p):
-    """One UE 5.5 property tag. Returns (name or None, type name, size, value start)."""
+    """One UE5 property tag (complete type names on 1012+, legacy tags on 1008..1011).
+    Returns (name or None, type name, size, value start).
+    """
     name = pkg.fname(b, p)
     p += 8
     if name == 'None':
         return None, None, 0, p
-    type_name = None
-    remaining = 1
-    while remaining:
-        node = pkg.fname(b, p)
-        (inner,) = struct.unpack_from('<i', b, p + 8)
-        p += 12
-        if type_name is None:
-            type_name = node
-        remaining += inner - 1
-    size, flags = struct.unpack_from('<IB', b, p)
-    p += 5
-    if flags & 1:
-        p += 4                                   # array index
-    if flags & 2:
-        p += 16                                  # property guid
+    if pkg.ue5 >= 1012:
+        type_name = None
+        remaining = 1
+        while remaining:
+            node = pkg.fname(b, p)
+            (inner,) = struct.unpack_from('<i', b, p + 8)
+            p += 12
+            if type_name is None:
+                type_name = node
+            remaining += inner - 1
+        size, flags = struct.unpack_from('<IB', b, p)
+        p += 5
+        if flags & 1:
+            p += 4                               # array index
+        if flags & 2:
+            p += 16                              # property guid
+        return name, type_name, size, p
+
+    type_name = pkg.fname(b, p)
+    p += 8
+    size, _arr_idx = struct.unpack_from('<ii', b, p)
+    p += 8
+    if type_name == 'StructProperty':
+        p += 24                                  # StructName (8B) + StructGuid (16B)
+    elif type_name == 'BoolProperty':
+        p += 1                                   # BoolVal (1B)
+    elif type_name in ('ByteProperty', 'EnumProperty'):
+        p += 8                                   # EnumName (8B)
+    elif type_name in ('ArrayProperty', 'SetProperty'):
+        p += 8                                   # InnerType (8B)
+    elif type_name == 'MapProperty':
+        p += 16                                  # KeyType (8B) + ValueType (8B)
+    elif type_name == 'OptionalProperty':
+        p += 8                                   # ValueType (8B)
+    has_guid = b[p]
+    p += 1 + (16 if has_guid else 0)
     return name, type_name, size, p
 
 
@@ -148,6 +184,8 @@ def read_store(pkg, b, p, end):
         if name == 'SortedParameterOffsets':
             (count,) = struct.unpack_from('<i', b, val)
             q = val + 4
+            if pkg.ue5 < 1012 and q + 8 <= val + size:
+                _in, _it, _is, q = read_tag(pkg, b, q)
             for _ in range(count):
                 var = pkg.fname(b, q)
                 q += 8
