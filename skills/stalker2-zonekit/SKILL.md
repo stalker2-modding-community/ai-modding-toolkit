@@ -79,6 +79,7 @@ a ShaderCompileWorker crash closes the editor, or the launcher stub is refused. 
 - references/reading-source.md: before reading uncooked assets, uasset-dump output, texture settings or a material's wiring.
 - references/editor-gui.md: before writing kit steps or a paste block, launching the editor, verifying a save, or Sequencer work.
 - references/headless-python.md: before a headless Python run, or making a mod or copying in a GSC asset without the GUI.
+- references/live-bridge.md: before starting or calling the opt-in localhost HTTP bridge inside an open GUI session.
 - references/materials.md: before patching a constant, Custom node code or an instance value, or touching static switches.
 - references/cooking.md: before cooking, packing or splitting a kit mod, and when a cook, pack or kit binary fails.
 - references/cook-performance.md: before speeding up the kit's own `GSCCookMod`, or repacking without a cook.

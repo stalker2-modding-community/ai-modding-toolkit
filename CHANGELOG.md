@@ -18,6 +18,9 @@
 - stalker2-curves: `scripts/decode_curves.py` adds `--check` (flags cubic keys with non-zero tangents) and `--diff <vanilla> <mod>`.
 - stalker2-mod-setup: added `scripts/mod_guardrail.py` and `init_mod_repo.py --with-hook` for opt-in pre-commit checks
   (blocks secrets, nested `Content/Content/`, and dev dirs in `Content/`; warns on user paths in logs/notes and unknown `Content/` files).
+- stalker2-zonekit: added opt-in localhost HTTP editor bridge (`scripts/editor_bridge.py`, `sdk_run.py --bridge*`,
+  `references/live-bridge.md`) with fail-closed bearer token auth, single-mod write lock, local `script_root` scope, and
+  `tools/build_pack.py` `http.server`/`socketserver` scan coverage.
 
 ## 1.0.0 (2026-11-15)
 First public release, under the MIT license. 20 skills for STALKER 2 modding, an interactive installer, and an install
