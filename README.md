@@ -3,7 +3,7 @@
 A collaborative project by the STALKER 2 modding community: skills that teach AI coding agents how STALKER 2: Heart of
 Chornobyl modding really works.
 
-20 skills cover paks and IoStore, cfg tables, game data, the Zone Kit, cooking, Blueprint logic, animation, sound and voice,
+21 skills cover paks and IoStore, cfg tables, game data, the Zone Kit, cooking, Blueprint logic, mod settings menus, animation, sound and voice,
 saves, localization, testing in game, crashes, Vortex and FOMOD, releasing and publishing. They work with Claude Code, Codex,
 GitHub Copilot, Cursor, Gemini CLI and other agents that read Agent Skills. Each skill loads only when a task needs it.
 
@@ -33,7 +33,7 @@ install. See [SECURITY.md](SECURITY.md).
 |---|---|
 | [Noah Semus](https://github.com/noahsemus) | The [Stalker 2 modding harness](https://github.com/noahsemus/stalker2-modding-harness): Blueprint paste tooling and traps, game facts, player animation, the mod settings menu notes, cook classifier rules |
 | [sdwvit](https://github.com/sdwvit) | cfg reference, gameplay data, combat, console commands, saves, localization, voice-over, Wwise audio, publishing, Linux, cook performance, placing world actors; and [s2cfgtojson](https://github.com/sdwvit/S2CfgToJSON), which the cfg tools run on |
-| [gjacka](https://github.com/gjacka) | Paks and IoStore, cfg patch rules and linting, the Zone Kit and cooking, crashes, testing, updates, Vortex, releasing, the installer |
+| [gjacka](https://github.com/gjacka) | Paks and IoStore, cfg patch rules and linting, the Zone Kit and cooking, crashes, testing, updates, Vortex, releasing, the installer, mod settings menus (S2MM and the MCM API) |
 | [Felicheat](https://github.com/Felicheat) | Installer `--exclude` and the `zonekit` preset, kit path search, Niagara reader support for older files, material tools, the optional cfg companion pak, offline asset scanner and summary, pre-cook mod validator, curve check and diff, the optional commit guard |
 
 Everyone whose tools the skills rely on is listed in [CREDITS.md](CREDITS.md).

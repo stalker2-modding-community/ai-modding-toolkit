@@ -92,6 +92,7 @@ game files.
 | Versions, changelogs, zips, FOMOD installers, public text | stalker2-release |
 | How Vortex installs and deploys mods | stalker2-vortex |
 | Blueprint logic, paste text, input, mod actors | stalker2-blueprints |
+| In-game settings for a mod (S2MM's API or the MCM API), moving a mod off MCM | stalker2-mod-menus |
 | Player animation, poses, hands | stalker2-animation |
 | A mod's own text, .locres | stalker2-localization |
 | Save files | stalker2-saves |

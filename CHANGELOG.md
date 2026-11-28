@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- stalker2-mod-menus (new): in-game settings for a mod through a mod menu API. S2MM (Stalker 2 Mod Menu, MIT) is a settings page in the
+  game's Esc menu with values per save file. Two ways in: S2MM's own API (the toolkit scripts that write a mod's settings Blueprints and pastes
+  from a settings file, `s2mm_make.py`) and the MCM API, which S2MM 1.2.0 answers itself so an MCM mod runs with no MCM
+  installed (references/mcm-in-s2mm.md: the contract kept, the differences, the type table, what is not covered, a test
+  checklist). Also a guide for choosing between the two, the optional MCM-to-S2MM converter (`s2mm_convert_mcm.py`), and
+  Blueprint and kit traps proven while building it (typed 0 / false paste defaults dropped, action nodes that look pure,
+  the instanced-struct save hook). Verified on build 26123434 with S2MM 1.0.0 to 1.2.0; marked untested: a toolkit button
+  reaching the mod's own Branch, MCM Button / String / Transform / Rotator rows under S2MM, and a converter run on a real
+  MCM mod.
+- stalker2-blueprints: references/mcm.md names S2MM as a second menu that answers the MCM API and adds the rule to talk
+  only to the two interfaces and the enum.
 - installer: added `--exclude <names or numbers>` for `--install`, added the `zonekit` preset, and kept groups, presets and
   token estimates working when `install.py` runs directly from a source checkout without a prebuilt `catalog.json`.
 - stalker2-zonekit: `scripts/niagara_constants.py` reads a Niagara system's module constants straight from the uncooked

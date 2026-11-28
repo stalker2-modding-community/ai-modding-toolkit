@@ -8,7 +8,7 @@ endorsed by GSC Game World, Epic Games, Anthropic or any author below. S.T.A.L.K
 |---|---|
 | Noah Semus ([noahsemus](https://github.com/noahsemus)) | Author of the [Stalker 2 modding harness](https://github.com/noahsemus/stalker2-modding-harness) (MIT). stalker2-blueprints, stalker2-animation and the classifier rules in stalker2-zonekit are adapted from it; scripts copied from it carry its notice. |
 | sdwvit ([sdwvit](https://github.com/sdwvit)) | Wrote, inside that harness, the documents and tools that stalker2-saves, stalker2-localization, stalker2-voiceover, stalker2-audio, stalker2-publish and stalker2-linux are adapted from, and the cfg reference, gameplay data, combat, console command, cook performance and editor paste material merged into stalker2-cfg, stalker2-gamedata, stalker2-testing and stalker2-zonekit, and the world-actor placement notes in stalker2-zonekit. Author of s2cfgtojson. |
-| gjacka ([gjacka](https://github.com/gjacka)) | stalker2-paks, stalker2-cfg, stalker2-gamedata, stalker2-curves, stalker2-zonekit, stalker2-testing, stalker2-crashes, stalker2-updates, stalker2-vortex, stalker2-release, stalker2-workflow, stalker2-mod-setup, the installer and the build checks. |
+| gjacka ([gjacka](https://github.com/gjacka)) | stalker2-paks, stalker2-cfg, stalker2-gamedata, stalker2-curves, stalker2-zonekit, stalker2-testing, stalker2-crashes, stalker2-updates, stalker2-vortex, stalker2-release, stalker2-workflow, stalker2-mod-setup, stalker2-mod-menus (with its S2MM toolkit scripts), the installer and the build checks. |
 | Felicheat ([Felicheat](https://github.com/Felicheat)) | The installer's `--exclude` option and `zonekit` preset. In stalker2-zonekit: the kit path search, older-file support in `niagara_constants.py`, `--pack-cfg`, `uasset_scan.py`, `uasset_summary.py` and `sdk_validate_mod.py`. In stalker2-curves: `--check` and `--diff` in `decode_curves.py`. In stalker2-mod-setup: the optional commit guard. |
 
 ## Notice for material from the Stalker 2 modding harness
@@ -41,7 +41,7 @@ Every file adapted or copied from the harness says so. This notice applies to al
 |---|---|---|
 | sdwvit | [s2cfgtojson](https://github.com/sdwvit/S2CfgToJSON) | stalker2-cfg's tools need it; `npm install` fetches it. Its terms are his: its readme says non-commercial use. |
 | KynesPeace / ZunaSW | Kynes Commands Console (Nexus Mods, STALKER 2) | One console mod that works for stalker2-testing. |
-| KynesPeace | Mod Configuration Menu (Nexus Mods, STALKER 2) | stalker2-blueprints describes how a mod registers its settings with it. No code included. |
+| KynesPeace | Mod Configuration Menu (Nexus Mods, STALKER 2) | stalker2-blueprints describes how a mod registers its settings with it; stalker2-mod-menus describes how S2MM answers the same public interface, and its converter reads a mod's calls to those public functions. No code included. |
 | ChemBoy1 | [STALKER 2 Vortex extension](https://github.com/ChemGuy1611/ChemBoy1-Vortex-Games) (GPL-3.0) | stalker2-vortex describes how it behaves. No code included. |
 | trumank, Archengius | [retoc](https://github.com/trumank/retoc) (MIT) | IoStore containers. |
 | trumank | [repak](https://github.com/trumank/repak) (MIT or Apache-2.0) | Plain paks. |
