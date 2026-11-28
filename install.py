@@ -62,8 +62,8 @@ DEFAULT_GROUPS = [
     ('data', 'Game files and data', ['stalker2-paks', 'stalker2-cfg', 'stalker2-gamedata', 'stalker2-curves',
                                      'stalker2-localization', 'stalker2-saves']),
     ('test', 'Testing and fixing', ['stalker2-testing', 'stalker2-crashes']),
-    ('kit', 'Zone Kit and assets', ['stalker2-zonekit', 'stalker2-blueprints', 'stalker2-animation', 'stalker2-audio',
-                                    'stalker2-voiceover']),
+    ('kit', 'Zone Kit and assets', ['stalker2-zonekit', 'stalker2-blueprints', 'stalker2-mod-menus', 'stalker2-animation',
+                                    'stalker2-audio', 'stalker2-voiceover']),
     ('ship', 'Shipping mods', ['stalker2-release', 'stalker2-vortex', 'stalker2-publish']),
 ]
 DEFAULT_PRESETS = {

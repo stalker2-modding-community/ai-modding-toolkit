@@ -43,6 +43,8 @@ Pak priority and conflict scans: stalker2-paks. Cfg patch files: stalker2-cfg.
   (names) and `--imports`.
 
 ## MCM: what it is and its API
+A second menu answers this same API: S2MM (open source) from 1.2.0 on, so a provider written as below also runs for
+players who have S2MM and no MCM. What it keeps the same, what differs, and a converter to its own API: stalker2-mod-menus.
 Mod Configuration Menu 2.0 is a community settings menu other mods register with: Zone Kit NewContent under
 `/ModConfigurationMenu/`, opened in game from its own key. The names below were read from its installed containers.
 - `BPI_MCM_API`: `AddUniqueModID`, `RegisterModSetting`, `RegisterDefaultModSetting`, `GetModSetting`, `SetModSetting`,
@@ -93,6 +95,8 @@ Mod Configuration Menu 2.0 is a community settings menu other mods register with
   once.
 
 ## Design
+- Talk only to the two interfaces and the enum. A mod that reads MCM's own variables, widgets or save data works with
+  MCM itself and nowhere else.
 - Keep settings as variables with defaults on the mod's runtime actor, so the mod works without MCM. A small provider
   actor (implements the interface, spawned by the mod's subsystem) registers them and writes them into the runtime actor
   on Apply.

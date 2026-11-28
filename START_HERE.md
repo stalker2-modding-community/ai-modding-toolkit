@@ -24,7 +24,7 @@ point is open until tested.
 | Start here | stalker2-workflow (how the agent should work with you), stalker2-mod-setup (learns your own mods), stalker2-updates (game update checks), stalker2-linux |
 | Game files and data | stalker2-paks, stalker2-cfg, stalker2-gamedata, stalker2-curves, stalker2-localization, stalker2-saves |
 | Testing and fixing | stalker2-testing (in-game console tests), stalker2-crashes |
-| Zone Kit and assets | stalker2-zonekit, stalker2-blueprints, stalker2-animation, stalker2-audio, stalker2-voiceover |
+| Zone Kit and assets | stalker2-zonekit, stalker2-blueprints, stalker2-mod-menus (in-game settings for a mod: the S2MM and MCM APIs), stalker2-animation, stalker2-audio, stalker2-voiceover |
 | Shipping mods | stalker2-release, stalker2-vortex, stalker2-publish |
 
 "core" = workflow, mod-setup, updates, paks, cfg, gamedata, testing, crashes, release, vortex.

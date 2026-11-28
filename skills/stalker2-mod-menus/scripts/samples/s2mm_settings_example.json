@@ -1,0 +1,22 @@
+{
+  "mod": "S2MMDemo",
+  "id": "s2mm_demo",
+  "name": "S2MM Demo",
+  "author": "S2MM toolkit",
+  "group": "S2MM",
+  "settings": [
+    {"id": "h_main", "type": "header", "label": "Main"},
+    {"id": "Enabled", "type": "toggle", "label": "Enabled", "desc": "Turns the demo on or off.", "default": true},
+    {"id": "Strength", "type": "slider", "label": "Strength", "desc": "A slider with decimals.", "default": 1.5, "min": 0, "max": 5, "step": 0.5},
+    {"id": "Count", "type": "intslider", "label": "Count", "desc": "A slider with whole numbers.", "default": 3, "min": 1, "max": 10, "step": 1},
+    {"id": "Mode", "type": "choice", "label": "Mode", "desc": "Pick one with Left / Right. The variable holds the index: 0 = Easy.", "options": ["Easy", "Normal", "Hard"], "default": 1},
+    {"id": "h_more", "type": "header", "label": "More"},
+    {"id": "Distance", "type": "number", "label": "Distance", "desc": "A number box with decimals, no range.", "default": 250},
+    {"id": "Seed", "type": "intnumber", "label": "Seed", "desc": "A number box with whole numbers, no range.", "default": 42},
+    {"id": "Tint", "type": "color", "label": "Tint", "desc": "A colour: red, green and blue, each 0 to 255.", "default": [255, 128, 0]},
+    {"id": "about", "type": "info", "label": "Version", "desc": "Made with the S2MM toolkit.", "text": "1.0"},
+    {"id": "h_input", "type": "header", "label": "Button and key"},
+    {"id": "Ping", "type": "button", "label": "Ping", "desc": "A button: your nodes run when it is pressed.", "text": "PING"},
+    {"id": "Hotkey", "type": "key", "label": "Hotkey", "desc": "A key picker: A / Enter, then a key (F-keys, Insert, Home, number pad). Delete clears it.", "default": "F8"}
+  ]
+}
